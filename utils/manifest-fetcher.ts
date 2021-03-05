@@ -6,6 +6,8 @@ import { promiseAnyPolyfill } from "./promise-any-polyfill";
  */
 export class ManifestFetcher {
     private readonly apiUrl = `${process.env.apiUrl}/manifests`;
+    private readonly apiBackupUrl = `${process.env.appGalleryPackageGeneratorUrl}/webmanifest`;
+    public manifestFetched = false;
 
     constructor (private url: string, private axios: any) {
         
@@ -16,12 +18,14 @@ export class ManifestFetcher {
         // Manifest detection is surprisingly tricky due to redirects, dynamic code generation, SSL problems, and other issues.
         // We have 3 techniques to detect the manifest:
         // 1. The legacy PWABuilder API
-        // 2. An Azure function that uses Chrome Puppeteer to fetch the manifest
-        // 3. An Azure function that parses the HTML to find the manifest.
+        // 2. Backup API from PWABuilder-AG.com
+        // 3. An Azure function that uses Chrome Puppeteer to fetch the manifest
+        // 4. An Azure function that parses the HTML to find the manifest.
         // This fetch() function runs all 3 manifest detection schemes concurrently and returns the first one that succeeds.
 
         const manifestDetectors = [
             this.getManifestViaApi(), 
+            this.getManifestViaBackupApi(),
             this.getManifestViaFilePost(), 
             this.getManifestViaHtmlParse()
         ];
@@ -50,7 +54,19 @@ export class ManifestFetcher {
         
         const postResult = this.axios.$post(this.apiUrl, options);
         postResult.then((r: ManifestDetectionResult) => console.info("Fetching manifest via API succeeded", r));
+        this.manifestFetched = true;
         return postResult;
+    }
+
+    // Use a Backup service to fetch the manifest, if there is no manifest, this API will generate a basic manifest
+    private getManifestViaBackupApi(): Promise<ManifestDetectionResult> {
+        // console.log('getManifestViaBackupApi');
+        const options = {url: this.url}
+        const postResult = this.axios.$post(this.apiBackupUrl, options);
+        postResult.then((r: ManifestDetectionResult) => console.info("Fetching manifest via backup API succeeded"));//, JSON.stringify(r)));
+        if(this.manifestFetched){
+            return postResult;
+        }
     }
 
     // Uses Azure manifest Puppeteer service to fetch the manifest, then POSTS it to the API.

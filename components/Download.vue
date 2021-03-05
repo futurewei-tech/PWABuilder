@@ -263,6 +263,65 @@ export default class extends Vue {
     }
   }
 
+  public async generateAppGalleryPackage() {
+    let appGalleryOptions = JSON.parse(this.androidOptions);
+    if(!appGalleryOptions.whitelist)
+      appGalleryOptions.whitelist = "";
+    
+    this.isReady = false;
+    const generateApkUrl = `${process.env.appGalleryPackageGeneratorUrl}/build_apk`;
+    try {
+      const response = await fetch(generateApkUrl, {
+        method: "POST",
+        headers: new Headers({'content-type': 'application/json'}),
+        body: JSON.stringify(appGalleryOptions)
+      });
+
+      if (response.status === 200) {
+        const data = await response.blob();
+        const url = window.URL.createObjectURL(data);
+        window.location.assign(url);
+        this.$emit('apkDownloaded', {
+          detail: data
+        });
+      } else {
+        const responseText = await response.text();
+        this.showErrorMessage(`Error generating Android package.\n\nStatus code: ${response.status}\n\nError: ${response.statusText}\n\nDetails: ${responseText}`);
+      }
+    } catch (err) {
+      this.showErrorMessage(`Error generating Android platform due to HTTP error.\n\nStatus code: ${err.status}\n\nError: ${err.statusText}\n\nDetails: ${err}`);
+    } finally {
+      this.isReady = true;
+    }
+  }
+
+  public async publishAppGallery() {
+    const publishAppGalleryApkUrl = `${process.env.appGalleryPackageGeneratorUrl}/publish_apk`;
+    try {
+      const response = await fetch(publishAppGalleryApkUrl, {
+        method: "POST",
+        headers: new Headers({'content-type': 'application/json'}),
+        body: JSON.stringify(this.androidOptions)
+      });
+
+      if (response.status === 200) {
+        const data = await response.blob();
+        const url = window.URL.createObjectURL(data);
+        window.location.assign(url);
+
+        this.$emit('apkDownloaded', {
+          detail: data
+        });
+
+      } else {
+        const responseText = await response.text();
+        this.showErrorMessage(`Error generating Android package.\n\nStatus code: ${response.status}\n\nError: ${response.statusText}\n\nDetails: ${responseText}`);
+      }
+    } catch (err) {
+      this.showErrorMessage(`Error generating Android platform due to HTTP error.\n\nStatus code: ${err.status}\n\nError: ${err.statusText}\n\nDetails: ${err}`);
+    }
+  }
+
   public async buildArchive(
     platform: string,
     parameters: string[]
@@ -308,6 +367,10 @@ export default class extends Vue {
         this.isReady = true;
         this.showErrorMessage(`Error building package.\n${e}`);
       }
+    }
+
+    if (platform === "appgallery") {
+      await this.generateAppGalleryPackage();
     }
 
     if (this.$awa) {

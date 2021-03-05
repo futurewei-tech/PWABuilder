@@ -41,6 +41,25 @@
       </div>
     </div>    
 
+    <!-- Toast notification for AppGallery publish success -->
+    <div class="packageError" role="alert" aria-live="assertive" aria-atomic="true" v-if="appGalleryPublishSuccessMessage">
+      <div class="errorHeader">
+        <strong class="errorTitle">
+          <i class="fa fa-check-circle text-success"></i>
+          AppGallery Publish Success!
+        </strong>
+        <button type="button" class="closeBtn" aria-label="Close" @click="appGalleryPublishSuccessMessage = null">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="errorBody">
+        <pre>{{appGalleryPublishSuccessMessage}}</pre>
+      </div>
+      <div class="errorFooter">
+
+      </div>
+    </div>
+
     <Modal
       :title="$t('publish.package_name')"
       :button_name="$t('modal.done')"
@@ -1151,6 +1170,831 @@
       </section>
     </div>
 
+    <div v-if="openAppGallery" ref="appGalleryModal" id="appGalleryPlatModal">
+      <button @click="closeAppGalleryModal()" id="closeAppGalleryPlatButton">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <section id="appGalleryModalBody">
+        <div style="width:100%;">
+          <form-wizard
+            title="AppGallery + HMS Download, Publish Options"
+            subtitle=""
+            stepSize="sm"
+            color="#9337d8"
+            @on-loading="clearError"
+            finish-button-text="Close"
+            @on-complete="closeAppGalleryModal()"
+            >
+            <tab-content title="APK options" :before-change="validateAPKOptions">
+              <div class="l-generator-error" v-if="appGalleryPWAError">
+                <span v-for="err in appGalleryPWAError"><span class="icon-exclamation"></span> {{err}}</br></span>
+              </div>
+              <div class="l-generator-error" v-if="appGalleryPWAWarning">
+                <span v-for="err in appGalleryPWAWarning"><span class="icon-exclamation"></span> {{err}}</br></span>
+              </div>
+              <p style="width:100%;">Step 1: Customize your Android package below</p>
+
+              <section id="appGalleryModalBody" class="appGalleryOptionsModalBody">
+                <form style="width: 100%">
+                  <div class="row">
+                    <div class="col-lg-6 col-md-12">
+                      <div class="form-group">
+                        <label for="packageIdInput">
+                          {{ $t("publish.label_package_name") }}
+                          <i
+                            class="fas fa-info-circle"
+                            title="The unique identifier of your app. It should contain only letters, numbers, and periods. Example: com.companyname.appname"
+                            aria-label="The unique identifier of your app. It should contain only letters, numbers, and periods. Example: com.companyname.appname"
+                            role="definition"
+                          ></i>
+                        </label>
+                        <input
+                          id="packageIdInput"
+                          class="form-control"
+                          :placeholder="$t('publish.placeholder_package_name')"
+                          type="text"
+                          required
+                          v-model="appGalleryForm.packageId"
+                        />
+                      </div>
+
+                      <div class="row">
+                        <div class="col-lg-6 col-md-12">
+                          <div class="form-group">
+                            <label for="appNameInput">App name</label>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="appNameInput"
+                              placeholder="My Awesome PWA"
+                              required
+                              v-model="appGalleryForm.name"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="col-lg-6 col-md-12">
+                          <div class="form-group">
+                            <label for="appLauncherNameInput">
+                              Launcher name
+                              <i
+                                class="fas fa-info-circle"
+                                title="The app name used on the Android launch screen. Typically, this is the short name of the app."
+                                aria-label="The app name used on the Android launch screen. Typically, this is the short name of the app."
+                                role="definition"
+                              ></i>
+                            </label>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="appLauncherNameInput"
+                              placeholder="Awesome PWA"
+                              required
+                              v-model="appGalleryForm.launcherName"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row">
+                        <div class="col-lg-6 col-md-12">
+                          <div class="form-group">
+                            <label for="appVersionInput">
+                              App version
+                              <i
+                                class="fas fa-info-circle"
+                                title="The version of your app displayed to users. This is a string, typically in the form of '1.0.0.0'. Maps to android:versionName."
+                                aria-label
+                                role="definition"
+                              ></i>
+                            </label>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="appVersionInput"
+                              placeholder="1.0.0.0"
+                              required
+                              v-model="appGalleryForm.appVersion"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="col-lg-6 col-md-12">
+                          <div class="form-group">
+                            <label for="appVersionCodeInput">
+                              <a
+                                href="https://developer.android.com/studio/publish/versioning#appversioning"
+                                target="_blank"
+                                rel="noopener"
+                              >App version code</a>
+                              <i
+                                class="fas fa-info-circle"
+                                title="A positive integer used as an internal version number. This is not shown to users. Android uses this value to protect against downgrades. Maps to android:versionCode."
+                                aria-label="A positive integer used as an internal version number. This is not shown to users. Android uses this value to protect against downgrades. Maps to android:versionCode."
+                                role="definition"
+                                style="margin-left: 5px;"
+                              ></i>
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="2100000000"
+                              class="form-control"
+                              id="appVersionCodeInput"
+                              placeholder="1"
+                              required
+                              v-model="appGalleryForm.appVersionCode"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="form-group">
+                        <label for="hostInput">Host</label>
+                        <input
+                          type="url"
+                          class="form-control"
+                          id="hostInput"
+                          placeholder="https://mysite.com"
+                          required
+                          v-model="appGalleryForm.host"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="startUrlInput">
+                          Start URL
+                          <i
+                            class="fas fa-info-circle"
+                            title="The start path for the TWA. Must be relative to the Host URL. You can specify '/' if you don't have a start URL different from Host."
+                            aria-label="The start path for the TWA. Must be relative to the Host URL."
+                            role="definition"
+                          ></i>
+                        </label>
+                        <input
+                          type="url"
+                          class="form-control"
+                          id="startUrlInput"
+                          placeholder="/index.html"
+                          required
+                          v-model="appGalleryForm.startUrl"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="manifestUrlInput">Manifest URL</label>
+                        <input
+                          type="url"
+                          class="form-control"
+                          id="manifestUrlInput"
+                          placeholder="https://mysite.com/manifest.json"
+                          required
+                          v-model="appGalleryForm.webManifestUrl"
+                          @keyup="checkIconAndManifest()"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <div v-if="appGalleryForm.iconUrl.length == 0" style="width:100%; display:block;">
+                          <div style="width: 100%;">
+                            <span style="float: left; width: 18%; font-size: 16px;">
+                              Get Icon
+                            </span>
+                            <input type="text" v-model="getIconInput" style="font-size: 14px; width: 48%; float: left; margin-right: 4px;" />
+                            <div class="getIconButton" @click="getIcon(getIconInput)">
+                              Search
+                            </div>
+                          </div>
+                          <br><br>
+                          <div style="font-size: 10px; width: 100%;" v-show="getIconStatus">
+                            Getting icons using App name(s) "{{ getIconInput }}".
+                          </div>
+                          <div style="color: red; font-size: 10px; line-height: 12px; width: 100%;" v-show="getIconFailed">
+                            Getting icons using App name(s) "{{ getIconInput }}" failed. Please change the app name and try again. Tips: try to shorten the keywords and make it more relevant.
+                          </div>
+                          <div style="border: solid 1px #999; overflow-x: scroll; border-radius:4px; padding: 4px;" v-show="iconsArray.length > 0">
+                            <ul style="padding:0px; margin:0px; white-space: nowrap;" v-for="icon in iconsArray">
+                              <li style="margin-right:4px; border: solid 1px #cfcfcf; padding: 4px; margin: 4px; border-radius:4px; display: block; float:left; list-style-type: none;">
+                                <img v-bind:src="icon.src" style="height: 30px;" @click="changeIconUrl(icon.src)" />
+                              </li>
+                            </ul>
+                          </div>
+                          <div style="font-size: 11px; color: #888; font-style: italic; width: 100%; display: block;" v-show="iconsArray.length > 0">
+                            Click on the image to fill Icon URL field.
+                          </div>
+                        </div>
+                        <label for="iconUrlInput">Icon URL <span v-show="appGalleryForm.iconUrl.length > 0" @click="clearIconUrl" style="border: solid 1px #cfcfcf; padding: 3px 6px; font-size: 10px; border-radius: 4px;">X</span>&nbsp;&nbsp;&nbsp;&nbsp;<img v-bind:src="appGalleryForm.iconUrl" style="height: 30px; top: 6px; position: relative;" /></label>
+                        <input
+                          type="url"
+                          class="form-control"
+                          id="iconUrlInput"
+                          placeholder="https://myawesomepwa.com/512x512.png"
+                          v-model="appGalleryForm.iconUrl"
+                          @keyup="checkIconAndManifest()"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="maskIconUrlInput">
+                          <a
+                            href="https://web.dev/maskable-icon"
+                            title="Read more about maskable icons"
+                            target="_blank"
+                            rel="noopener"
+                            aria-label="Read more about maskable icons"
+                          >Maskable icon</a> URL
+                          <i
+                            class="fas fa-info-circle"
+                            title="The URL to an icon with a minimum safe zone of trimmable padding, enabling rounded icons on certain Android platforms. Optional."
+                            aria-label="The URL to an icon with a minimum safe zone of trimmable padding, enabling rounded icons on certain Android platforms. Optional."
+                            role="definition"
+                          ></i>
+                        </label>
+                        <input
+                          type="url"
+                          class="form-control"
+                          id="maskIconUrlInput"
+                          placeholder="https://myawesomepwa.com/512x512-maskable.png"
+                          v-model="appGalleryForm.maskableIconUrl"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label for="monochromeIconUrlInput">
+                          <a
+                            href="https://w3c.github.io/manifest/#monochrome-icons-and-solid-fills"
+                            target="_blank"
+                            rel="noopener"
+                          >Monochrome icon</a> URL
+                          <i
+                            class="fas fa-info-circle"
+                            title="The URL to an icon containing only white and black colors, enabling Android to fill the icon with user-specified color or gradient depending on theme, color mode, or contrast settings. Optional."
+                            aria-label="The URL to an icon containing only white and black colors, enabling Android to fill the icon with user-specified color or gradient depending on theme, color mode, or contrast settings. Optional."
+                            role="definition"
+                          ></i>
+                        </label>
+                        <input
+                          type="url"
+                          class="form-control"
+                          id="monochromeIconUrlInput"
+                          placeholder="https://myawesomepwa.com/512x512-monochrome.png"
+                          v-model="appGalleryForm.monochromeIconUrl"
+                        />
+                      </div>
+
+                      <div class="row">
+                        <div class="col-lg-4 col-md-12">
+                          <div class="form-group">
+                            <label for="themeColorInput">
+                              Status bar color
+                              <i
+                                class="fas fa-info-circle"
+                                title="Also known as the theme color, this is the color of the Android status bar in your app. Note: the status bar will be hidden if Display Mode is set to fullscreen."
+                                aria-label="Also known as the theme color, this is the color of the Android status bar in your app. Note: the status bar will be hidden if Display Mode is set to fullscreen."
+                                role="definition"
+                              ></i>
+                            </label>
+                            <input
+                              type="color"
+                              class="form-control"
+                              id="themeColorInput"
+                              v-model="appGalleryForm.themeColor"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-12">
+                          <div class="form-group">
+                            <label for="navigationColorInput">
+                              Nav bar color
+                              <i
+                                class="fas fa-info-circle"
+                                title="The color of the Android navigation bar in your app. Note: the navigation bar will be hidden if Display Mode is set to fullscreen."
+                                aria-label="The color of the Android navigation bar in your app. Note: the navigation bar will be hidden if Display Mode is set to fullscreen."
+                                role="definition"
+                              ></i>
+                            </label>
+                            <input
+                              type="color"
+                              class="form-control"
+                              id="navigationColorInput"
+                              v-model="appGalleryForm.navigationColor"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="col-lg-4 col-md-12">
+                          <div class="form-group">
+                            <label for="bgColorInput">
+                              Splash color
+                              <i
+                                class="fas fa-info-circle"
+                                title="Also known as background color, this is the color of the splash screen for your app."
+                                aria-label="Also known as background color, this is the color of the splash screen for your app."
+                                role="definition"
+                              ></i>
+                            </label>
+                            <input
+                              type="color"
+                              class="form-control"
+                              id="bgColorInput"
+                              v-model="appGalleryForm.backgroundColor"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row">
+                        <div class="col-lg-12 col-md-12">
+                          <div class="form-group">
+                            <label for="appNameInput">
+                              Whitelist 
+                              <i
+                                class="fas fa-info-circle"
+                                title="List the URLs that is allowed for in-app redirection. Separated by commas."
+                                aria-label="List the URLs that is allowed for in-app redirection. Separated by commas."
+                                role="definition"
+                              ></i>
+                              <i>
+                                (comma separated)
+                              </i>
+                            </label>
+                            <input
+                              type="text"
+                              class="form-control"
+                              id="whitelistInput"
+                              placeholder=""
+                              required
+                              v-model="appGalleryForm.whitelist"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                    <div class="col-lg-6 col-md-12">
+                      
+
+                      <div class="form-group">
+                        <label for="splashFadeoutInput">Splash screen fade out duration (ms)</label>
+                        <input
+                          type="number"
+                          class="form-control"
+                          id="splashFadeoutInput"
+                          placeholder="300"
+                          v-model="appGalleryForm.splashScreenFadeOutDuration"
+                        />
+                      </div>
+
+                      <div class="form-group">
+                        <label>Fallback behavior</label>
+                        <div class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="fallbackType"
+                            id="fallbackCustomTabsInput"
+                            value="customtabs"
+                            v-model="appGalleryForm.fallbackType"
+                          />
+                          <label class="form-check-label" for="fallbackCustomTabsInput">
+                            Custom Tabs
+                            <i
+                              class="fas fa-info-circle"
+                              title="Use Chrome Custom Tabs as a fallback for your PWA when the full trusted web activity (TWA) experience is unavailable."
+                              aria-label="When trusted web activity (TWA) is unavailable, use Chrome Custom Tabs as a fallback for your PWA."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="fallbackType"
+                            id="fallbackWebViewInput"
+                            value="webview"
+                            v-model="appGalleryForm.fallbackType"
+                          />
+                          <label class="form-check-label" for="fallbackWebViewInput">
+                            Web View
+                            <i
+                              class="fas fa-info-circle"
+                              title="Use a web view as the fallback for your PWA when the full trusted web activity (TWA) experience is unavailable."
+                              aria-label="When trusted web activity (TWA) is unavailable, use a web view as the fallback for your PWA."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="form-group">
+                        <label>Display mode</label>
+                        <div class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="displayMode"
+                            id="standaloneDisplayModeInput"
+                            value="standalone"
+                            v-model="appGalleryForm.display"
+                          />
+                          <label class="form-check-label" for="standaloneDisplayModeInput">
+                            Standalone
+                            <i
+                              class="fas fa-info-circle"
+                              title="Your PWA will use the whole screen but keep the Android status bar and navigation bar."
+                              aria-label="Your PWA will use the whole screen but keep the Android status bar and navigation bar."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="displayMode"
+                            id="fullscreenDisplayModeInput"
+                            value="fullscreen"
+                            v-model="appGalleryForm.display"
+                          />
+                          <label class="form-check-label" for="fullscreenDisplayModeInput">
+                            Fullscreen
+                            <i
+                              class="fas fa-info-circle"
+                              title="Your PWA will use the whole screen and remove the Android status bar and navigation bar. Suitable for immersive experiences such as games or media apps."
+                              aria-label="Your PWA will use the whole screen and remove the Android status bar and navigation bar. Suitable for immersive experiences such as games or media apps."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="form-group">
+                        <label>Notifications</label>
+                        <div class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="enableNotificationsInput"
+                            v-model="appGalleryForm.enableNotifications"
+                          />
+                          <label class="form-check-label" for="enableNotificationsInput">
+                            Enable
+                            <i
+                              class="fas fa-info-circle"
+                              title="Whether to enable Push Notification Delegation. If enabled, your PWA can send push notifications without browser permission prompts."
+                              aria-label
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="form-group">
+                        <label>Signing key</label>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="signingInput" id="generateSigningKeyInput" value="new" v-model="appGalleryForm.signingMode" @change="appGallerySigningModeChanged">
+                          <label class="form-check-label" for="generateSigningKeyInput">
+                            Create new
+                            <i
+                              class="fas fa-info-circle"
+                              title="PWABuilder will generate a new signing key for you and sign your APK with it. Your download will contain the new signing key and passwords."
+                              aria-label="PWABuilder will generate a new signing key for you and sign your APK with it. Your download will contain the new signing key and passwords."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                        <!-- <div class="form-check">
+                          <input class="form-check-input" type="radio" name="signingInput" id="unsignedInput" value="none" v-model="appGalleryForm.signingMode" @change="appGallerySigningModeChanged">
+                          <label class="form-check-label" for="unsignedInput">
+                            None
+                            <i
+                              class="fas fa-info-circle"
+                              title="PWABuilder will generate an unsigned APK. Google Play Store will sign your package. This is Google's recommended approach."
+                              aria-label="PWABuilder will generate an unsigned APK. Google Play Store will sign your package. This is Google's recommended approach."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="signingInput" id="useMySigningInput" value="mine" v-model="appGalleryForm.signingMode" @change="appGallerySigningModeChanged">
+                          <label class="form-check-label" for="useMySigningInput">
+                            Use mine
+                            <i
+                              class="fas fa-info-circle"
+                              title="Upload your existing signing key. Use this option if you already have a signing key and you want to publish a new version of an existing app in Google Play."
+                              aria-label="Upload your existing signing key. Use this option if you already have a signing key and you want to publish a new version of an existing app in Google Play."
+                              role="definition"
+                            ></i>
+                          </label>
+                        </div> -->
+                      </div>
+
+                      <div
+                        v-if="appGalleryForm.signingMode === 'mine' || appGalleryForm.signingMode === 'new'"
+                        style="margin-left: 15px;"
+                      >
+                        <div class="form-group" v-if="appGalleryForm.signingMode === 'mine'">
+                          <label for="signingKeyInput">Key file</label>
+                          <input
+                            type="file"
+                            class="form-control"
+                            id="signingKeyInput"
+                            @change="appGallerySigningKeyUploaded"
+                            accept=".keystore"
+                            required
+                            style="border: none;"
+                          />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyAliasInput">Key alias</label>
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="signingKeyAliasInput"
+                            placeholder="my-key-alias"
+                            required
+                            v-model="appGalleryForm.signing.alias"
+                          />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyFullNameInput">Key full name</label>
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="signingKeyFullNameInput"
+                            required
+                            placeholder="John Doe"
+                            v-model="appGalleryForm.signing.fullName"
+                            pattern="[a-zA-Z0-9\s]+"
+                          />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyOrgInput">Key organization</label>
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="signingKeyOrgInput"
+                            required
+                            placeholder="My Company"
+                            v-model="appGalleryForm.signing.organization"
+                            pattern="[a-zA-Z0-9\s]+"
+                          />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyOrgUnitInput">Key organizational unit</label>
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="signingKeyOrgUnitInput"
+                            required
+                            placeholder="Engineering Department"
+                            v-model="appGalleryForm.signing.organizationalUnit"
+                          />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyCountryCodeInput">
+                            Key country code
+                            <i
+                              class="fas fa-info-circle"
+                              title="The 2 letter country code to list on the signing key"
+                              aria-label="The 2 letter country code to list on the signing key"
+                              role="definition"
+                            ></i>
+                          </label>
+                          <input
+                            type="text"
+                            class="form-control"
+                            id="signingKeyCountryCodeInput"
+                            required
+                            placeholder="US"
+                            v-model="appGalleryForm.signing.countryCode"
+                          />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyPasswordInput">Key password</label>
+                          <input type="password" class="form-control" id="signingKeyPasswordInput" v-model="appGalleryForm.signing.keyPassword" :placeholder="appGalleryPasswordPlaceholder" />
+                        </div>
+
+                        <div class="form-group">
+                          <label for="signingKeyStorePasswordInput">Key store password</label>
+                          <input type="password" class="form-control" id="signingKeyStorePasswordInput" v-model="appGalleryForm.signing.storePassword" :placeholder="appGalleryPasswordPlaceholder" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </section>
+
+            </tab-content>
+            <tab-content title="HMS">
+                <div style="width: 100%; height: 400px;">
+                  <p style="width:100%;">Step 2: Select HMS kits to be included in your APK</p>
+                  <div style="width: 210px; border:1px solid #333; height: 210px; border-radius:10%; float: left; padding: 10px; margin: 2%; position: relative;">
+                    <div style="text-align:center; font-size: 20px; font-weight: bold; width: 100%;">HMS Push Kit</div>
+                    <div style="width: 30px; height: 30px; z-index:3; position: relative; left: 140px; top: 10px;">
+                      <input type="checkbox" id="hmsPushKit" name="hmsPushKit" v-model="appGalleryForm.hmsPushKit" @change="printAppGalleryForm()">
+                    </div>
+                    <div style="width: 110px; height: 110px; z-index:2; position: relative; margin: auto; top: -10px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 139.88 154.66"><defs><style>.cls-1{fill:#f3a641;}.cls-2{fill:#fefefe;}.cls-3{fill:#fefbf8;}.cls-4{fill:#fdf9f3;}.cls-5{fill:#fdf8f2;}.cls-6{fill:#f3a742;}</style></defs><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M139.53,47.63c0-6.05-4.36-13.45-9.62-16.44L79,2.21c-5.26-3-13.83-2.94-19,.12L9.43,31.91C4.21,35,0,42.41,0,48.46L.35,107c0,6,4.37,13.45,9.62,16.45l50.89,29c5.26,3,13.83,2.95,19-.11l50.54-29.58c5.23-3.06,9.47-10.51,9.43-16.56Z"/><path class="cls-2" d="M56.47,52.86c3,.41,6,0,8.87,1,2.22.82,4.21-.22,6.07-1.42,7.15-4.62,15-7.85,22.92-10.71a3.05,3.05,0,0,1,.46-.2c2.9-.51,6.42-1.92,8.57,0,2,1.79,0,5-.76,7.44-2.7,8.55-5.85,16.91-11.21,24.22A5.28,5.28,0,0,0,90.56,77c.15,1.82,0,3.74.49,5.45,2.6,8.35.18,14.82-6.7,20-2.44,1.85-4.44,4.29-6.65,6.47-1,1-2,2.4-3.78,1.84s-1.51-2.34-1.64-3.77c-.26-2.64-.38-5.3-.72-7.93-.83-6.34-.89-6.42-6.87-4.8A10.37,10.37,0,0,1,57.91,94c-6.87-2.7-9.65-8.06-7.4-16.2,1.12-4.08.12-5.2-3.72-4.8s-7.53-1-11.28-1.56c-2.6-.4-3-1.9-1.22-3.76,4.6-4.73,9.11-9.57,14-14C50.49,51.73,53.71,53,56.47,52.86Z"/><path class="cls-3" d="M33.91,112.07c-2.28-.68-2.28-2.49-.91-4.07,3-3.5,6.32-6.82,9.63-10.08,1.25-1.24,3.07-1.77,4.42-.24s.55,3-.81,4.33c-3.14,3-6.23,6-9.35,8.93A3.58,3.58,0,0,1,33.91,112.07Z"/><path class="cls-4" d="M57.78,104.55c-1.82,2.73-3.66,6-7.38,7.18-1.64.54-2.4-.59-2.32-2.25s5.47-7.44,7.32-7.61C57,101.73,58,102.38,57.78,104.55Z"/><path class="cls-5" d="M42.35,88.53c-.1,2-5.73,7.94-7.35,7.93-2.37,0-2.22-2-1.78-3.21,1.09-3,3.6-5.09,6.26-6.62C41,85.78,42.32,86.84,42.35,88.53Z"/><path class="cls-6" d="M82.1,69a7.12,7.12,0,0,1-7-6.43c-.14-3.31,3.14-6.9,6.56-6.71,3.67.2,6.34,2,6.56,6.06C88.42,65.86,85.78,68.88,82.1,69Z"/></g></g></svg>
+                    </div>
+                    <div style="width: 100%; height: 30px; position: relative; margin-top: 8px; left: 0px; font-size: 11px; text-align:center;">
+                      <a href="https://developer.huawei.com/consumer/en/hms/huawei-pushkit" target="_new" title="Learn more about HMS Push Kit" >
+                        Learn more
+                      </a>
+                    </div>
+                  </div>
+                  <div style="width: 210px; border:1px solid #333; height: 210px; border-radius:10%; float: left; padding: 10px; margin: 2%; position: relative;">
+                    <div style="text-align:center; font-size: 20px; font-weight: bold; width: 100%;">HMS Analytics Kit</div>
+                    <div style="width: 30px; height: 30px; z-index:3; position: relative; left: 140px; top: 10px;">
+                      <input type="checkbox" id="hmsAnalyticsKit" name="hmsAnalyticsKit" v-model="appGalleryForm.hmsAnalyticsKit"  @change="printAppGalleryForm()">
+                    </div>
+                    <div style="width: 110px; height: 110px; z-index:2; position: relative; margin: auto; top: -10px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 139.88 154.66"><defs><style>.cls-1{fill:#f3a641;}.cls-2{fill:#fff;}</style></defs><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M139.53,47.63c0-6.05-4.36-13.45-9.62-16.44L79,2.21c-5.26-3-13.83-2.94-19,.12L9.43,31.91C4.21,35,0,42.41,0,48.46L.35,107c0,6,4.37,13.45,9.62,16.45l50.89,29c5.26,3,13.83,2.95,19-.11l50.54-29.58c5.23-3.06,9.47-10.51,9.43-16.56Z"/><path class="cls-2" d="M103.4,75.77a36.17,36.17,0,0,1-7.82,22l9.91,9.82c.88,1-4.23,6.18-5.3,5.3l-10.47-9.4a37.59,37.59,0,0,1-21.07,7.07A34.75,34.75,0,1,1,103.4,75.77Z"/><circle class="cls-1" cx="68.65" cy="75.77" r="30.79"/><circle class="cls-2" cx="68.65" cy="75.77" r="26.37"/><rect class="cls-1" x="55.96" y="68.09" width="4.74" height="19.6" rx="2"/><rect class="cls-1" x="66.22" y="60.82" width="4.74" height="26.87" rx="2"/><rect class="cls-1" x="76.49" y="72.72" width="4.74" height="14.98" rx="2"/></g></g></svg>
+                    </div>
+                    <div style="width: 100%; height: 30px; position: relative; margin-top: 8px; left: 0px; font-size: 11px; text-align:center;">
+                      <a href="https://developer.huawei.com/consumer/en/hms/huawei-analyticskit" target="_new" title="Learn more about HMS Analytics Kit" >
+                        Learn more
+                      </a>
+                    </div>
+                  </div>
+                  <div style="width: 210px; border:1px solid #333; height: 210px; border-radius:10%; float: left; padding: 10px; margin: 2%; position: relative;">
+                    <div style="text-align:center; font-size: 20px; font-weight: bold; width: 100%;">HMS Ads Kit</div>
+                    <div style="width: 30px; height: 30px; z-index:3; position: relative; left: 140px; top: 10px;">
+                      <input type="checkbox" id="hmsAdsKit" name="hmsAdsKit" v-model="appGalleryForm.hmsAdsKit"  @change="printAppGalleryForm()">
+                    </div>
+                    <div style="width: 110px; height: 110px; z-index:2; position: relative; margin: auto; top: -10px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 139.88 154.66"><defs><style>.cls-1{fill:#f3a641;}.cls-2{fill:#fff;}</style></defs><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M139.53,47.63c0-6.05-4.36-13.45-9.62-16.44L79,2.21c-5.26-3-13.83-2.94-19,.12L9.43,31.91C4.21,35,0,42.41,0,48.46L.35,107c0,6,4.37,13.45,9.62,16.45l50.89,29c5.26,3,13.83,2.95,19-.11l50.54-29.58c5.23-3.06,9.47-10.51,9.43-16.56Z"/><polygon class="cls-2" points="70.98 37.9 28.37 105.81 113.6 105.81 70.98 37.9"/><polygon class="cls-1" points="70.98 60.91 42.81 105.81 99.16 105.81 70.98 60.91"/><polygon class="cls-2" points="70.98 80.53 55.12 105.81 86.85 105.81 70.98 80.53"/></g></g></svg>
+                    </div>
+                    <div style="width: 100%; height: 30px; position: relative; margin-top: 8px; left: 0px; font-size: 11px; text-align:center;">
+                      <a href="https://developer.huawei.com/consumer/en/hms/huawei-adskit" target="_new" title="Learn more about HMS Ads Kit" >
+                        Learn more
+                      </a>
+                    </div>
+                  </div>
+                  <div style="width: 100%; float: left;">
+                    <p class="appGalleryText">What is <b>HMS</b>?</br>
+                    <b>HMS (Huawei Mobile Services)</b> offers a rich array of open device and cloud capabilities, which facilitate efficient development, fast growth, and flexible monetization. This enables global developers to pursue groundbreaking innovation, deliver next-level user experiences, and make premium content and services broadly accessible.</br>
+                    <a href="https://developer.huawei.com/consumer/en/hms" target="_new"><b>Click here</b></a> to more about HMS capabilities.</p>
+                  </div>
+                </div>
+
+            </tab-content>
+            <tab-content title="HMS+AppGallery Configs" :before-change="validateAGCHMS">
+              <div style="width: 100%; height: 450px;">
+                <div class="l-generator-error" v-if="appGalleryPWAError">
+                  <span v-for="err in appGalleryPWAError"><span class="icon-exclamation"></span> {{err}}</br></span>
+                </div>
+                <p style="width:100%;">Step 3: Add agconnect-services.json <span v-show="appGalleryForm.hmsAdsKit">& configure HMS kit</span></p>
+
+                <h2 v-show="appGalleryForm.hmsAdsKit">HMS Ads Kit</h2>
+                <table width="100%" v-show="appGalleryForm.hmsAdsKit">
+                  <tr>
+                    <td style="width: 20px; height:20px;"> <input type="checkbox" id="hmsAdsSplash" name="hmsAdsSplash" v-model="appGalleryForm.hmsAdsSplash"></td>
+                    <td>Splash</td>
+                    <td><input type="text" placeholder="Ad ID from PPS" v-model="appGalleryForm.hmsAdsSplashId" @keydown="checkHMSAds(1)" maxlength="14" /></td>
+                  </tr>
+                  <tr>
+                    <td style="width: 20px; height:20px;"> <input type="checkbox" id="hmsAdsTopBanner" name="hmsAdsTopBanner" v-model="appGalleryForm.hmsAdsTopBanner"></td>
+                    <td>Top banner</td>
+                    <td><input type="text" placeholder="Ad ID from PPS" v-model="appGalleryForm.hmsAdsTopBannerId" v-on:input="checkHMSAds(2)" maxlength="14" /></td>
+                  </tr>
+                  <tr>
+                    <td style="width: 20px; height:20px;"> <input type="checkbox" id="hmsAdsBottomBanner" name="hmsAdsBottomBanner" v-model="appGalleryForm.hmsAdsBottomBanner" /></td>
+                    <td>Bottom banner</td>
+                    <td><input type="text" placeholder="Ad ID from PPS" v-model="appGalleryForm.hmsAdsBottomBannerId" v-on:input="checkHMSAds(3)" maxlength="14" /></td>
+                  </tr>
+                </table>
+                <p class="appGalleryText" v-show="appGalleryForm.hmsAdsKit">How do I get the HMS Ads Kit IDs?</br>
+                You need to create the HMS Ads Kit IDs through HUAWEI Ads Publisher Service, please <a href="https://developer.huawei.com/consumer/en/doc/development/HMSCore-Guides/publisher-service-introduction-0000001050064960" target="_new"><b>follow the instructions here</b></a> to generate it.</p>
+                <hr v-show="appGalleryForm.hmsAdsKit"/>
+                <h5>Select agconnect-services.json from your local directory</h5>
+                <input type="file" name="agcs" accept="application/json" @change="onAGCSFileChange" class="form-control-file" />
+                <hr />
+                <p class="appGalleryText">What is <b>agconnect-services.json</b>?</br>
+                <b>Agconnect-services.json</b> is a JSON document created by Huawei AppGallery Connect to allow your app to connect to their HMS and AppGallery Connect (AGC) backend API. You need to provide this file to enable HMS kit &amp; AGC capability. <a href="https://developer.huawei.com/consumer/en/doc/development/AppGallery-connect-Guides/agc-get-started" target="_new"><b>Click here</b></a> for step-by-step instructions to create agconnect-services.json for your AppGallery app.</p>
+              </div>
+            </tab-content>
+            <tab-content title="Download/Publish">
+              <p style="width:100%;">Step 4: Download or Publish (Optional) APK</p>
+              <div>
+                <vue-tabs>
+                  <v-tab title="Download">
+                    <br /><br /><br /><br />
+                    <div>
+                      <Download
+                        :showMessage="true"
+                        :androidOptions="JSON.stringify(this.appGalleryForm)"
+                        id="appGalleryDownloadButton"
+                        class="appGalleryDownloadButton"
+                        platform="appgallery"
+                        message="Build & Download My PWA"
+                        v-on:apkDownloaded="showInstall($event)"
+                      />
+                    </div>
+                    <br />
+                    <p class="appGalleryDownloadText">Your download will contain instructions for submitting your app to HUAWEI AppGallery app store.</p>
+                    <br /><br /><br /><br /><br /><br />
+                  </v-tab>
+                  <v-tab title="Publish">
+                    <table width="100%">
+                      <tr>
+                        <td>
+                          <label class="form-group">Client ID</label>
+                          <input type="text" name="agcClientId" v-model="appGalleryPublish.client_id" class="form-control">
+                          <br>
+                        </td>
+                        <td width="40"></td>
+                        <td>
+                          <label class="form-group">Client Key</label>
+                          <input type="text" name="agcClientKey" v-model="appGalleryPublish.client_key" class="form-control">
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <label class="form-group">App ID</label>
+                          <input type="text" name="agcAppId" v-model="appGalleryPublish.app_id" class="form-control">
+                        </td>
+                        <td width="40"></td>
+                        <td>
+                          <h5>Select APK from your local directory</h5>
+                          <input class="form-control-file" type="file" v-on:change="getAGAPK" accept=".apk" />Browse</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="3">
+                          <p class="appGalleryText">What is the purpose of this Publish interface? (optional)</br>
+                          The Publish interface provides you a quick and easy option to upload and publish your PWA APK to your AppGallery developer account. To use this tool, please make sure that you have <a href="https://developer.huawei.com/consumer/en/doc/agc-create_app" target="_new"><b>created your app</b></a> to get your <b>App ID</b>, <a href="https://developer.huawei.com/consumer/en/doc/development/AppGallery-connect-Guides/agcapi-getstarted" target="_new"><b>configure your AppGallery Connect API</b></a> to get your <b>Client ID</b> &amp; <b>Client Key</b>. You do not need to use this interface to publish to your AppGallery account.</br>
+                          More information:
+                          <a href="https://developer.huawei.com/consumer/en/doc/start/registration-and-verification-0000001053628148" target="_new"><b>Get started as a Huawei Developer</b></a> |
+                          <a href="https://developer.huawei.com/consumer/en/doc/distribution/app/agc-release_app" target="_new"><b>Publish your app in AppGallery.</b></a></br>
+                          </p>
+                          <Publish
+                            :showMessage="true"
+                            :appGalleryPublishAPK="this.appGalleryPublish"
+                            class="appGalleryDownloadButton"
+                            message="Publish APK to AppGallery"
+                            aria-label="Publish APK to AppGallery"
+                            v-on:appGalleryPublishSuccess="showAppGalleryPublishSuccess($event)"
+                          />
+                        </td>
+                      </tr>
+                    </table>
+                  </v-tab>
+                </vue-tabs>
+              </div>
+            </tab-content>
+          </form-wizard>
+          <!-- <p>
+            Your download will contain
+            <a href="https://github.com/pwa-builder/CloudAPK/blob/master/Next-steps.md">instructions</a>
+            for submitting your app to the AppGallery.
+          </p>
+
+          <p v-if="this.androidForm.package_name">
+            <span>Package Name:</span>
+            {{ $t(this.androidForm.package_name) }}
+          </p> -->
+        </div>
+
+        <!-- <div id="appGalleryModalButtonSection">
+          <Download
+            :showMessage="true"
+            :androidOptions="this.androidForm"
+            id="appGalleryDownloadButton"
+            class="appGalleryDownloadButton"
+            platform="androidTWA"
+            message="Download"
+            v-on:apkDownloaded="showInstall($event)"
+            v-on:downloadPackageError="showPackageDownloadError($event)"
+          />
+          <button class="appGalleryDownloadButton" @click="openAppGalleryOptionModal()">Options</button>
+        </div> -->
+
+        <div id="extraSection">
+          <p>
+            Your PWA will be a Trusted Web Activity.
+            <Download
+              :showMessage="true"
+              id="legacyDownloadButton"
+              class="webviewButton"
+              platform="android"
+              message="Use a legacy webview instead (not recommended)"
+              v-on:downloadPackageError="showPackageDownloadError($event)"
+            />
+          </p>
+        </div>
+      </section>
+    </div>
+
     <div v-if="openWindows" ref="windowsModal" id="androidPlatModal">
       <button @click="closeAndroidModal()" id="closeAndroidPlatButton">
         <i class="fas fa-times"></i>
@@ -1436,6 +2280,58 @@
               </section>
             </div>
 
+            <!-- huawei platform -->
+            <div
+              @mouseover="platCardHover($event)"
+              @mouseleave="platCardUnHover($event)"
+              id="pwaAndroidCard"
+              class="pwaCard"
+            >
+              <div class="pwaCardHeaderBlock">
+                <svg
+                  width="46"
+                  height="30"
+                  viewBox="0 0 38 30"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-label="Huawei Icon"
+                >
+                  <style type="text/css">
+                    .st0{fill:#020000;}
+                  </style>
+                  <path class="st0" d="M16.8,22.4c0.1-0.1,0.1-0.1,0.1-0.1c-2.7-5.8-6.1-11.2-10-16.2c0,0-3.1,3-2.9,5.9c0.1,1.4,0.8,2.7,1.8,3.6
+                    c2.7,2.7,9.4,6.1,10.9,6.8C16.7,22.5,16.7,22.5,16.8,22.4 M15.7,24.7c0-0.1-0.1-0.1-0.2-0.1l0,0L4.6,25c1.2,2.1,3.2,3.8,5.3,3.3
+                    c1.5-0.3,4.7-2.6,5.8-3.4l0,0C15.8,24.8,15.7,24.7,15.7,24.7 M15.9,23.7c0.1-0.1-0.1-0.2-0.1-0.2l0,0C11,20.3,1.7,15.3,1.7,15.3
+                    c-1.1,3.3,0.6,6.8,3.8,8.1c0.7,0.3,1.4,0.4,2.1,0.4C7.7,23.8,14.1,23.8,15.9,23.7C15.8,23.8,15.9,23.8,15.9,23.7 M16.6,1.4
+                    c-0.5,0.1-1.8,0.3-1.8,0.3c-1.7,0.4-3.1,1.7-3.6,3.4c-0.3,1.1-0.3,2.4,0,3.5c1,4.3,5.8,11.4,6.8,12.9c0.1,0.1,0.1,0.1,0.1,0.1
+                    c0.1,0,0.1-0.1,0.1-0.1l0,0C19.9,5.6,16.6,1.4,16.6,1.4 M20.3,21.5c0.1,0,0.1,0,0.2-0.1l0,0c1.1-1.5,5.8-8.6,6.8-12.9
+                    c0.3-1.1,0.3-2.4,0-3.5c-0.6-1.7-1.9-3-3.6-3.4c0,0-0.8-0.2-1.7-0.3c0,0-3.3,4.2-1.7,20.1l0,0C20.2,21.5,20.3,21.5,20.3,21.5
+                     M22.9,24.6c0,0-0.1,0-0.1,0.1c0,0.1,0,0.1,0.1,0.2l0,0c1.1,0.7,4.3,3,5.8,3.4c0,0,2.9,1,5.3-3.3L22.9,24.6L22.9,24.6z M36.9,15.3
+                    c0,0-9.4,5-14.2,8.3l0,0c-0.1,0.1-0.1,0.1-0.1,0.2c0,0,0.1,0.1,0.1,0.1l0,0h8.5c0.7-0.1,1.3-0.2,1.9-0.4c1.6-0.6,2.9-1.8,3.5-3.4
+                    C37.3,18.5,37.4,16.8,36.9,15.3 M21.8,22.4c0.1,0.1,0.1,0.1,0.2,0l0,0c1.6-0.8,8.1-4.1,10.9-6.8c1.1-0.9,1.7-2.2,1.8-3.6
+                    c0.2-3.1-2.9-5.9-2.9-5.9c-3.9,5-7.3,10.4-10,16.1l0,0C21.7,22.3,21.7,22.4,21.8,22.4"/>
+                </svg>
+
+                <h2>HUAWEI AppGallery</h2>
+              </div>
+
+              <p>
+                PWAs are available through the browser on HUAWEI EMUI Phone, however your
+                PWA can also be submitted to HUAWEI AppGallery by submitting the
+                package you get below.
+              </p>
+
+              <section class="platformDownloadBar">
+                <button
+                  class="platformDownloadButton"
+                  @click="openAppGalleryModal()"
+                  aria-label="Open Android Modal"
+                >
+                  <i class="fas fa-long-arrow-alt-down" aria-label="Open Android Icon"></i>
+                </button>
+              </section>
+            </div>
+
             <!--samsung platform-->
             <div
               @mouseover="platCardHover($event)"
@@ -1598,11 +2494,16 @@ import { Action, State, namespace } from "vuex-class";
 import GeneratorMenu from "~/components/GeneratorMenu.vue";
 import StartOver from "~/components/StartOver.vue";
 import Download from "~/components/Download.vue";
+import Publish from "~/components/Publish.vue";
 import Loading from "~/components/Loading.vue";
 import Modal from "~/components/Modal.vue";
 import PublishCard from "~/components/PublishCard.vue";
 import Toolbar from "~/components/Toolbar.vue";
 import HubHeader from "~/components/HubHeader.vue";
+import {FormWizard, TabContent} from 'vue-form-wizard';
+import 'vue-form-wizard/dist/vue-form-wizard.min.css';
+import {VueTabs, VTab} from 'vue-nav-tabs';
+import 'vue-nav-tabs/themes/vue-tabs.css';
 import * as publish from "~/store/modules/publish";
 import { findSuitableIcon } from "~/utils/icon-utils";
 import {
@@ -1619,6 +2520,8 @@ import { validateWindowsOptions, generateWindowsPackageId } from "~/utils/window
 
 const PublishState = namespace(publish.name, State);
 const PublishAction = namespace(publish.name, Action);
+const AppGalleryPublishState = namespace(publish.name, State);
+const AppGalleryPublishAction = namespace(publish.name, Action);
 const GeneratorState = namespace(generatorName, State);
 const GeneratorAction = namespace(generatorName, Action);
 
@@ -1627,11 +2530,16 @@ const GeneratorAction = namespace(generatorName, Action);
     GeneratorMenu,
     Loading,
     Download,
+    Publish,
     StartOver,
     Modal,
     PublishCard,
     Toolbar,
     HubHeader,
+    FormWizard,
+    TabContent,
+    VueTabs,
+    VTab,
   },
 })
 export default class extends Vue {
@@ -1668,9 +2576,12 @@ export default class extends Vue {
 
   public appxError: string | null = null;
   public androidPWAErrors: string[] = [];
+  public appGalleryPWAError: string | null = null;
+  public appGalleryPWAWarning: string | null = null;
   public apkDownloaded: boolean = false;
   public modalStatus = false;
   public openAndroid: boolean = false;
+  public openAppGallery: boolean = false;
   public openWindows: boolean = false;
   public openTeams: boolean = false;
   public showBackground: boolean = false;
@@ -1685,6 +2596,8 @@ export default class extends Vue {
   public uploadColorLoaderActive: boolean = false;
   public uploadOutlineLoaderActive: boolean = false;
   public androidForm: publish.AndroidApkOptions | null = null;
+  public appGalleryForm: publish.AppGalleryApkOptions | null = null;
+  public appGalleryPublish: publish.AppGalleryPublish | null = null;
   public androidFormCopyForCancellation: publish.AndroidApkOptions | null = null;
   public teamsForm: publish.TeamsParams | null = null;
 
@@ -1694,6 +2607,10 @@ export default class extends Vue {
   private windowsSpartanForm: publish.WindowsPackageOptions | null = null;
   public windowsOptionsErrors: string[] = [];
   public windowsOptionsApplied: boolean = false;
+  public getIconStatus = false;
+  public getIconFailed = false;
+  public iconsArray = [];
+  public getIconInput = "";
 
   private readonly maxKeyFileSizeInBytes = 2097152; // 2MB. Typically, Android keystore files are ~3KB.
 
@@ -1701,15 +2618,20 @@ export default class extends Vue {
   private connected: boolean = false;
   private apk: Blob;
   private packageErrorMessage: string | null = null;
+  private appGalleryPublishSuccessMessage: string | null = null;
   private reportPackageErrorUrl: string | null;
   installing: boolean = false;
 
   public created(): void {
     this.updateStatus();
-    this.androidForm = this.createAndroidPackageOptionsFromManifest();
-    this.windowsAnaheimForm = this.createWindowsPackageOptionsFromManifest("anaheim");
-    this.windowsSpartanForm = this.createWindowsPackageOptionsFromManifest("spartan");
-    this.windowsForm = this.windowsSpartanForm;
+    if(this.manifest){
+      this.androidForm = this.createAndroidPackageOptionsFromManifest();
+      this.windowsAnaheimForm = this.createWindowsPackageOptionsFromManifest("anaheim");
+      this.windowsSpartanForm = this.createWindowsPackageOptionsFromManifest("spartan");
+      this.windowsForm = this.windowsSpartanForm;
+      this.appGalleryForm = this.createAppGalleryParamsFromManifest();
+      this.appGalleryPublish = this.createAppGalleryPublish();
+    }
   }
 
   showInstall(event) {
@@ -1723,6 +2645,11 @@ export default class extends Vue {
     this.packageErrorMessage = e.detail;
     this.reportPackageErrorUrl = this.getReportErrorUrl(e.detail, e.platform);
     console.error(this.packageErrorMessage, this.reportPackageErrorUrl);
+  }
+
+  showAppGalleryPublishSuccess(e: any) {
+    this.appGalleryPublishSuccessMessage = e.detail;
+    console.log(this.appGalleryPublishSuccessMessage);
   }
 
   getReportErrorUrl(errorMessage: string, platform: string): string {
@@ -1957,6 +2884,101 @@ export default class extends Vue {
     };
   }
 
+  createAppGalleryParamsFromManifest(): publish.AppGalleryApkOptions {
+    const pwaUrl = this.manifest.url;
+    if (!pwaUrl) {
+      throw new Error("Can't find the current URL");
+    }
+
+    const appName = this.manifest.short_name || this.manifest.name || this.manifest.json.short_name || this.manifest.json.name || "My PWA";
+    const packageName = generatePackageId(new URL(pwaUrl).hostname);
+
+    // Use standalone display mode unless the manifest has fullscreen specified.
+    const display =
+      this.manifest.display === "fullscreen" ? "fullscreen" : "standalone";
+
+    // StartUrl must be relative to the host.
+    // We make sure it is below.
+    let relativeStartUrl: string;
+    if (!this.manifest.start_url || this.manifest.start_url === "/" || this.manifest.start_url === "." || this.manifest.start_url === "./") {
+      // First, if we don't have a start_url in the manifest, or it's just "/",
+      // then we can just use that.
+      relativeStartUrl = "/";
+    } else {
+      // The start_url in the manifest is either a relative or absolute path.
+      // Ensure it's a path relative to the root.
+      const absoluteStartUrl = new URL(this.manifest.start_url, pwaUrl);
+      relativeStartUrl =
+        absoluteStartUrl.pathname + (absoluteStartUrl.search || "");
+    }
+
+    const manifestIcons = this.manifest.icons || [];
+    const icon =
+      findSuitableIcon(manifestIcons, "any", 512, 512, "image/png") ||
+      findSuitableIcon(manifestIcons, "any", 192, 192, "image/png") ||
+      findSuitableIcon(manifestIcons, "any", 512, 512, "image/jpeg") ||
+      findSuitableIcon(manifestIcons, "any", 192, 192, "image/jpeg") ||
+      findSuitableIcon(manifestIcons, "any", 512, 512, undefined) || // A 512x512 or larger image with unspecified type
+      findSuitableIcon(manifestIcons, "any", 192, 192, undefined) || // A 512x512 or larger image with unspecified type
+      findSuitableIcon(manifestIcons, "any", 0, 0, undefined);  // Welp, we tried. Any image of any size, any type.
+      // this.manifest.icon[0];
+    const maskableIcon =
+      findSuitableIcon(manifestIcons, "maskable", 512, 512, "image/png") ||
+      findSuitableIcon(manifestIcons, "maskable", 192, 192, "image/png") ||
+      findSuitableIcon(manifestIcons, "maskable", 192, 192, undefined);
+    const monochromeIcon =
+      findSuitableIcon(manifestIcons, "monochrome", 512, 512, "image/png") ||
+      findSuitableIcon(manifestIcons, "monochrome", 192, 192, "image/png") || 
+      findSuitableIcon(manifestIcons, "monochrome", 192, 192, undefined);
+
+    return {
+      packageId: packageName,
+      name: appName,
+      launcherName: this.manifest.short_name || this.manifest.json.short_name || appName, // launcher name should be the short name. If none is available, fallback to the full app name.
+      appVersion: "1.0.0.0",
+      appVersionCode: 1,
+      display: display,
+      host: pwaUrl,
+      startUrl: relativeStartUrl,
+      webManifestUrl: this.manifestUrl || "",
+      themeColor: this.manifest.theme_color || "#FFFFFF",
+      navigationColor:
+        this.manifest.theme_color || this.manifest.background_color || "#000000",
+      backgroundColor:
+        this.manifest.background_color ||
+        this.manifest.theme_color ||
+        "#FFFFFF",
+      iconUrl: icon ? icon.src : "",
+      maskableIconUrl: maskableIcon ? maskableIcon.src : "",
+      monochromeIconUrl: monochromeIcon ? monochromeIcon.src : "",
+      signingMode: "new",
+      signing: {
+        file: null,
+        alias: "my-key-alias",
+        fullName: `${this.manifest.short_name.replace(/[^\w\s]/gi, '') || this.manifest.name.replace(/[^\w\s]/gi, '') || "App"} Admin`,
+        organization: this.manifest.name.replace(/[^\w\s]/gi, '') || "PWABuilder",
+        organizationalUnit: "Engineering",
+        countryCode: "US",
+        keyPassword: "", // If empty, one will be generated by CloudAPK service
+        storePassword: "" // If empty, one will be generated by CloudAPK service
+      },
+      shortcuts: this.manifest.shortcuts || [],
+      fallbackType: "customtabs",
+      splashScreenFadeOutDuration: 300,
+      enableNotifications: false,
+      whitelist: this.whitelist,
+    };
+  }
+
+  createAppGalleryPublish(): publish.AppGalleryPublish {
+    return {
+      client_id: "",
+      client_key: "",
+      app_id: "",
+      apk: ""
+    };
+  }
+
   public mounted(): void {
     const overrideValues = {
       uri: window.location.href,
@@ -2024,6 +3046,32 @@ export default class extends Vue {
     }
   }
 
+  appGallerySigningModeChanged() {
+    if (!this.appGalleryForm || !this.appGalleryForm.signing) {
+      return;
+    }
+
+    // If the user chose "mine", clear out existing values.
+    if (this.appGalleryForm.signingMode === "mine") {
+      this.appGalleryForm.signing.alias = "";
+      this.appGalleryForm.signing.fullName = "";
+      this.appGalleryForm.signing.organization = "";
+      this.appGalleryForm.signing.organizationalUnit = "";
+      this.appGalleryForm.signing.countryCode = "";
+      this.appGalleryForm.signing.keyPassword = "";
+      this.appGalleryForm.signing.storePassword = "";
+    } else if (this.appGalleryForm.signingMode === "new") {
+      this.appGalleryForm.signing.alias = "my-key-alias";
+      this.appGalleryForm.signing.fullName = `${this.manifest.short_name || this.manifest.name || "App"} Admin`;
+      this.appGalleryForm.signing.organization = this.manifest.name || "PWABuilder";
+      this.appGalleryForm.signing.organizationalUnit = "Engineering";
+      this.appGalleryForm.signing.countryCode = "US";
+      this.appGalleryForm.signing.keyPassword = "";
+      this.appGalleryForm.signing.storePassword = "";
+      this.appGalleryForm.signing.file = null;
+    }
+  }
+
   get androidPasswordPlaceholder(): string {
     if (!this.androidForm) {
       return "";
@@ -2031,6 +3079,18 @@ export default class extends Vue {
 
     if (this.androidForm.signingMode === "new") {
       return "Type a new password or leave empty to generate one";
+    }
+
+    return "";
+  }
+
+  get appGalleryPasswordPlaceholder(): string {
+    if (!this.appGalleryForm) {
+      return "";
+    }
+
+    if (this.appGalleryForm.signingMode === "new") {
+      return "Type a new password or leave empty to use a generated one";
     }
 
     return "";
@@ -2070,6 +3130,44 @@ export default class extends Vue {
         signing.file = null;
         if (this.androidForm) {
           this.androidForm.signingMode = "none";
+        }
+      };
+
+      fileReader.readAsDataURL(keyFile);
+    }
+  }
+
+  appGallerySigningKeyUploaded(event: InputEvent) {
+    if (!this.appGalleryForm || !this.appGalleryForm.signing) {
+      return;
+    }
+
+    const signing = this.appGalleryForm.signing;
+    const filePicker = event.target as HTMLInputElement;
+    if (filePicker && filePicker.files && filePicker.files.length > 0) {
+      const keyFile = filePicker.files[0];
+
+      // Make sure it's a reasonable size.
+      if (keyFile.size > this.maxKeyFileSizeInBytes) {
+        console.error("Keystore file is too large.", {
+          maxSize: this.maxKeyFileSizeInBytes,
+          fileSize: keyFile.size
+        });
+        this.appGalleryForm.signingMode = "none";
+      }
+
+      // Read it in as a Uint8Array and store it in our signing object.
+      const fileReader = new FileReader();
+      fileReader.onload = () => (signing.file = fileReader.result as string);
+      fileReader.onerror = progressEvent => {
+        console.error(
+          "Unable to read keystore file",
+          fileReader.error,
+          progressEvent
+        );
+        signing.file = null;
+        if (this.appGalleryForm) {
+          this.appGalleryForm.signingMode = "none";
         }
       };
 
@@ -2134,6 +3232,32 @@ export default class extends Vue {
 
   public closeAndroidModal(): void {
     this.openAndroid = false;
+    this.openWindows = false;
+  }
+
+  public openAppGalleryOptionModal(): void {
+    this.openAppGallery = false;
+
+    // Create a copy of the Android form. If the user cancels the dialog, we'll revert back to this copy.
+    if (this.appGalleryForm) {
+      this.appGalleryFormCopyForCancellation = { ...this.appGalleryForm };
+      if (this.appGalleryForm.signing) {
+        this.appGalleryFormCopyForCancellation.signing = {
+          ...this.appGalleryForm.signing
+        };
+      }
+    }
+
+    (this.$refs.appGalleryPWAModal as Modal).show();
+  }
+
+  public openAppGalleryModal(): void {
+    this.openAppGallery = true;
+    this.checkIconAndManifest();
+  }
+
+  public closeAppGalleryModal(): void {
+    this.openAppGallery = false;
     this.openWindows = false;
   }
 
@@ -2276,6 +3400,21 @@ export default class extends Vue {
     this.androidPWAErrors = [];
   }
 
+  public async appGalleryOptionsModalSubmitted(): Promise<void> {
+    if (!this.appGalleryForm) {
+      return;
+    }
+    const validationErrors = validateAppGalleryOptions(this.appGalleryForm);
+    if (validationErrors.length > 0) {
+      this.androidPWAError = validationErrors.map(e => e.error).join(", ");
+      return;
+    }
+
+    (this.$refs.appGalleryPWAModal as Modal).hide();
+    this.openAppGallery = true;
+    this.androidPWAError = null;
+  }
+
   public androidOptionsModalCancelled() {
     this.androidForm =
       this.androidFormCopyForCancellation ||
@@ -2283,6 +3422,15 @@ export default class extends Vue {
     this.androidPWAErrors = [];
     (this.$refs.androidPWAModal as Modal).hide();
     this.openAndroid = true;
+  }
+
+  public appGalleryOptionsModalCancelled() {
+    this.appGalleryForm =
+      this.appGalleryFormCopyForCancellation ||
+      this.createAppGalleryParamsFromManifest();
+    this.androidPWAError = null;  // <--- need definition
+    (this.$refs.appGalleryPWAModal as Modal).hide();  // <--- need definition
+    this.openAppGallery = true;
   }
 
   public windowsOptionsModalCancelled() {
@@ -2351,6 +3499,22 @@ export default class extends Vue {
     this.openAndroid = true;
   }
 
+  public appGalleryModalClosed() {
+    this.modalStatus = false;
+    this.showBackground = false;
+    this.openAppGallery = true;
+  }
+
+  public printAppGalleryForm() {
+    this.appGalleryForm.HMSKits = [];
+    if(this.appGalleryForm.hmsAdsKit)
+      this.appGalleryForm.HMSKits.push('ads');
+    if(this.appGalleryForm.hmsAnalyticsKit)
+      this.appGalleryForm.HMSKits.push('analytics');
+    if(this.appGalleryForm.hmsPushKit)
+      this.appGalleryForm.HMSKits.push('push');
+  }
+
   public windowsModalClosed() {
     this.modalStatus = false;
     this.showBackground = false;
@@ -2372,7 +3536,252 @@ export default class extends Vue {
       this.windowsForm = this.windowsAnaheimForm;
     }
   }
+
+  public validateAPKOptions() {
+    return new Promise((resolve, reject) => {
+      const noKeyPassword = "Key password cannot be empty"
+      const noKeyStorePassword = "Key store password cannot be empty"
+      const passwordTooShort = "Key password or key store password must be at least 6 characters."
+      const keyPasswordsNotMatching = "Key password and key store password must be identical."
+      this.appGalleryPWAError = [];
+      if(this.appGalleryForm.signing.keyPassword.length == 0) {
+        console.error(noKeyPassword);
+        this.appGalleryPWAError.push(noKeyPassword);
+      }
+      if(this.appGalleryForm.signing.storePassword.length == 0) {
+        console.error(noKeyStorePassword);
+        this.appGalleryPWAError.push(noKeyStorePassword);
+      }
+      if(this.appGalleryForm.signing.storePassword.length < 6 || this.appGalleryForm.signing.keyPassword.length < 6) {
+        console.error(passwordTooShort);
+        this.appGalleryPWAError.push(passwordTooShort);
+      }
+      if(this.appGalleryForm.signing.storePassword !== this.appGalleryForm.signing.keyPassword) {
+        console.error(keyPasswordsNotMatching);
+        this.appGalleryPWAError.push(keyPasswordsNotMatching);
+      }
+      if(this.appGalleryPWAError.length > 0) {
+        console.error(this.appGalleryPWAError);
+        reject(false);
+      } else {
+        this.appGalleryPWAError = null;
+        console.log("validateAPKOptions OK")
+        resolve(true);        
+      }
+    })
+  }
+
+  public checkIconAndManifest() {
+    this.appGalleryPWAWarning = [];
+    const missingIconUrl = "Warning: Icon URL is missing, please enter a valid URL for the website. If you do not specify any Icon URL, Android default icon will be used by APK builder."
+    const missingWebManifest = "Warning: Manifest URL is missing, this indicates the website is not optimized for PWA. Please make sure the website is PWA compatible before proceeding. You can continue building this APK but it may not behave or perform normally."
+    if(this.appGalleryForm.iconUrl.length === 0){
+      console.error(missingIconUrl);
+      this.appGalleryPWAWarning.push(missingIconUrl);
+    }
+    if(this.appGalleryForm.webManifestUrl.length === 0) {
+      console.error(missingWebManifest);
+      this.appGalleryPWAWarning.push(missingWebManifest);
+    }
+    if(this.appGalleryPWAWarning.length === 0) {
+      this.appGalleryPWAWarning = null;
+    }
+  }
+
+  public validateAGCHMS() {
+    return new Promise((resolve, reject) => {
+      console.log('validateAGCHMS now')
+      this.appGalleryPWAError = [];
+      const wrongFormat = "HMS Ad Is must be in 14 characters string format, please check again.";
+      const missingId = "HMS Ad Is missing, pleaese select at least one type of ad and fill in the correct ads id."
+      if(this.appGalleryPWAError.length > 0) {
+        console.error(this.appGalleryPWAError);
+        reject(false);
+      } else {
+        this.appGalleryForm.ads_id = [];
+        if(this.appGalleryForm.hmsAdsSplash && this.appGalleryForm.hmsAdsSplashId){
+          this.appGalleryForm.ads_id.push({'splash':this.appGalleryForm.hmsAdsSplashId});
+        }
+        if(this.appGalleryForm.hmsAdsTopBanner && this.appGalleryForm.hmsAdsTopBannerId){
+          this.appGalleryForm.ads_id.push({'topBanner':this.appGalleryForm.hmsAdsTopBannerId});
+        }
+        if(this.appGalleryForm.hmsAdsBottomBanner && this.appGalleryForm.hmsAdsBottomBannerId){
+          this.appGalleryForm.ads_id.push({'bottomBanner':this.appGalleryForm.hmsAdsBottomBannerId});
+        }
+        this.appGalleryPWAError = null;
+        resolve(true);        
+      }
+    });
+  }
+
+  public checkHMSAds(type) {
+    if(this.appGalleryForm.hmsAdsSplashId && type == 1){
+      if(this.appGalleryForm.hmsAdsSplashId.length > 0)
+        this.appGalleryForm.hmsAdsSplash = true;
+      if(this.appGalleryForm.hmsAdsSplashId.length == 0){
+        this.appGalleryForm.hmsAdsSplash = false;
+      }
+    }
+    if(this.appGalleryForm.hmsAdsTopBannerId && type == 2){
+      if(this.appGalleryForm.hmsAdsTopBannerId.length > 0)
+        this.appGalleryForm.hmsAdsTopBanner = true;
+      if(this.appGalleryForm.hmsAdsTopBannerId.length == 0){
+        this.appGalleryForm.hmsAdsTopBanner = false;
+      }
+    }
+    if(this.appGalleryForm.hmsAdsBottomBannerId && type == 3){
+      if(this.appGalleryForm.hmsAdsBottomBannerId.length > 0)
+        this.appGalleryForm.hmsAdsBottomBanner = true;
+      if(this.appGalleryForm.hmsAdsBottomBannerId.length == 0){
+        this.appGalleryForm.hmsAdsBottomBanner = false;
+      }
+    }
+  }
+
+  public onAGCSFileChange(e){
+    let files = e.target.files || e.dataTransfer.files;
+    if (!files.length) return;
+    this.readAGCSFile(files[0]).then(
+      data => {
+        this.appGalleryForm.aGConnectServicesJSON = data;
+        console.log(JSON.stringify(this.appGalleryForm.aGConnectServicesJSON));
+        this.validateAGCJson();
+      }
+    ).then(
+      this.getBase64(files[0]).then(
+        data => {
+          this.appGalleryForm.agcs = data;
+        }
+      )
+    ).catch(err => console.error(err));
+  }
+
+  public validateAGCJson() {
+    this.appGalleryPWAError = [];
+
+    if(!this.appGalleryForm.aGConnectServicesJSON.client){
+      this.appGalleryPWAError.push("Missing 'client' key.");
+    } else {
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.cp_id){
+        this.appGalleryPWAError.push("Missing 'client.cp_id' key.");
+      }
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.product_id){
+        this.appGalleryPWAError.push("Missing 'client.product_id' key.");
+      }
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.client_id){
+        this.appGalleryPWAError.push("Missing 'client.client_id' key.");
+      }
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.client_secret){
+        this.appGalleryPWAError.push("Missing 'client.client_secret' key.");
+      }
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.app_id){
+        this.appGalleryPWAError.push("Missing 'client.app_id' key.");
+      }
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.package_name){
+        this.appGalleryPWAError.push("Missing 'client.package_name' key.");
+      } else {
+        if(this.appGalleryForm.aGConnectServicesJSON.client.package_name !== this.appGalleryForm.packageId) {
+          this.appGalleryPWAError.push(`The package name: "${this.appGalleryForm.aGConnectServicesJSON.client.package_name}" in the JSON is different than PWA package name: "${this.appGalleryForm.packageId}".`);
+        }
+      }
+      if(!this.appGalleryForm.aGConnectServicesJSON.client.api_key){
+        this.appGalleryPWAError.push("Missing 'client.api_key' key.");
+      }
+    }
+    if(this.appGalleryPWAError.length > 0) {
+      this.appGalleryPWAError.push(`This is not a valid agconnect-services.json, please make sure you use the correct agconnect-services.json provided by AppGallery.`)
+    } else {
+      this.appGalleryPWAError.length = null;
+    }
+  }
+
+  public readAGCSFile(file) {
+    return new Promise((resolve, reject) => {
+      let reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = e => resolve(JSON.parse(e.target.result));
+      reader.onerror = error => reject(error);
+    })
+  }
+
+  public getBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  public getAGAPK(e){
+    let file = e.target.files || e.dataTransfer.files;
+    if (!file.length) return;
+    this.getBase64(file[0]).then(
+      data => {
+        console.log(data);
+        this.appGalleryPublish.apk = data;
+      }
+    ).catch(err => console.error(err));
+  }
+
+  public async getIcon(name){
+    this.iconsArray = [];
+    this.getIconFailed = false;
+    this.getIconStatus = true;
+    const getIcons = `${process.env.appGalleryPackageGeneratorUrl}/get_icons`,
+          options = { name: name.replace(/ /g,"_") };
+    try {
+      const response = await fetch(getIcons, {
+        method: "POST",
+        headers: new Headers({'content-type': 'application/json'}),
+        body: JSON.stringify(options)
+      });
+
+      if (response.status === 200) {
+        this.getIconStatus = false;
+        const data = await response.json();
+        console.log(JSON.stringify(data));
+        this.iconsArray = data.icons;
+      } else {
+        this.getIconStatus = false;
+        this.getIconFailed = true;
+        const responseText = await response.text();
+        console.error(responseText);
+      }
+    } catch (err) {
+      this.getIconStatus = false;
+      this.getIconFailed = true;
+      console.error(err);
+    } finally {
+
+    }
+  }
+
+  public changeIconUrl(url){
+    this.appGalleryForm.iconUrl = url;
+  }
+
+  public clearIconUrl(){
+    this.appGalleryForm.iconUrl = ""; 
+  }
+
+  public clearError(){
+    if(!this.appGalleryForm.hmsAdsSplash)
+      this.appGalleryForm.hmsAdsSplash = true;
+    if(!this.appGalleryForm.hmsAdsTopBanner)
+      this.appGalleryForm.hmsAdsTopBanner = true;
+    if(!this.appGalleryForm.hmsAdsBottomBanner)
+      this.appGalleryForm.hmsAdsBottomBanner = true;
+    if(!this.appGalleryForm.hmsAdsSplashId)
+      this.appGalleryForm.hmsAdsSplashId = "testq6zq98hecj";
+    if(!this.appGalleryForm.hmsAdsTopBannerId)
+      this.appGalleryForm.hmsAdsTopBannerId = "testw6vs28auh3";
+    if(!this.appGalleryForm.hmsAdsBottomBannerId)
+      this.appGalleryForm.hmsAdsBottomBannerId = "testw6vs28auh3";
+  }
 }
+
+
 
 Vue.prototype.$awa = function (config) {
   if (awa) {
@@ -2881,6 +4290,15 @@ footer a {
           .pwaCardIconBlock {
             display: flex;
             align-items: center;
+          }
+
+          .platformDownloadButtonLeft {
+            border-radius: 10%;
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: rgba(60, 60, 60, 0.1);
+            position: absolute;
           }
 
           .platformDownloadButton {
@@ -3420,6 +4838,19 @@ footer a {
   will-change: opacity transform;
 }
 
+.getIconButton {
+  background: #8830d2;
+  font-size: 12px;
+  line-height: 14px;
+  border: none;
+  border-radius: 3px;
+  color: white;
+  padding: 4px 6px;
+  width: 30%;
+  float: left;
+  text-align: center;
+}
+
 #teamsModal {
   align-items: baseline;
 }
@@ -3535,5 +4966,171 @@ footer a {
     display: flex;
     flex-direction: column;
   }
+}
+
+#appGalleryModalBody #extraSection p {
+  color: grey;
+  font-size: 10px;
+}
+
+#appGalleryModalBody #extraSection #legacyDownloadButton {
+  color: grey;
+  font-size: 10px;
+  background: transparent;
+  padding-left: 0;
+  border: none;
+}
+
+#appGalleryModalBody {
+  width: 54em;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-left: 60px;
+  padding-right: 60px;
+  border-radius: 12px;
+}
+
+#appGalleryModalBody.appGalleryOptionsModalBody {
+  width: 100%;
+  align-items: start;
+  padding-left: 0;
+  max-height: 400px;
+  overflow: auto;
+}
+
+#appGalleryModalBody.appGalleryOptionsModalBody input {
+  margin-bottom: 12px;
+  border-color: #00000075;
+}
+
+#appGalleryModalBody.appGalleryOptionsModalBody label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+#appGalleryModalBody.appGalleryOptionsModalBody + .modal-buttons {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+#appGalleryModalBody.appGalleryOptionsModalBody .fa-info-circle {
+  color: $color-muted;
+}
+
+#closeAppGalleryPlatButton {
+  top: 10px;
+  border: none;
+  float: right;
+  height: 32px;
+  background: #3c3c3c;
+  color: white;
+  border-radius: 50%;
+  width: 32px;
+  margin-top: 10px;
+  margin-right: 10px;
+  right: 10px;
+  position: absolute;
+  font-size: 14px;
+}
+
+#appGalleryModalP {
+  font-family: sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.02em;
+  margin-top: 40px;
+}
+
+#appGalleryModalP a {
+  color: #9337d8;
+}
+
+#appGalleryModalBody #appGalleryModalSubText {
+  color: #3c3c3c;
+  display: block;
+  margin-bottom: 2em;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+#appGalleryModalButtonSection {
+  display: flex;
+  justify-content: space-around;
+  width: 80%;
+  margin-top: 1em;
+  margin-bottom: 20px;
+}
+
+.appGalleryDownloadButton {
+  background: #9337d8;
+  color: white;
+  font-size: 14px;
+  border-radius: 20px;
+  width: 150px;
+  height: 40px;
+  padding-left: 20px;
+  padding-right: 20px;
+  font-family: sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  margin: 0 auto;
+}
+
+#appGalleryPlatModal {
+  background: transparent;
+  position: fixed;
+  width: 100%;
+  height: 80%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  animation-name: opened;
+  animation-duration: 250ms;
+  border-radius: 4px;
+  will-change: opacity transform;
+}
+
+.appGalleryDownloadButton {
+  background: linear-gradient(to right, #1fc2c8, #9337d8 116%);
+  color: #ffffff;
+  width: 300px;
+}
+
+.form-control-file {
+  height: 16px;
+  font-size: 12px;
+  line-height: 14px;
+}
+
+.tab-content {
+  padding: 20px 40px;
+  border: solid 1px #cfcfcf;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.appGalleryDownloadText {
+  text-align: center;
+  font-size: 12px;
+}
+
+.appGalleryText {
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.wizard-header {
+  padding-top: 15px;
 }
 </style>
